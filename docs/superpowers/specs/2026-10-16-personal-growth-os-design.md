@@ -114,11 +114,11 @@ export function generateDailyPlan(input: PlannerInput): PlannerResult;
 1. 输入池 = `date <= 生成日 && status === 'todo'` 的任务（当日新任务 + 逾期未决任务；done/deferred 不参与——逾期需用户显式延期并填写原因，不自动消失）。任务来源：今日页手动新建，或路线页 Goal 的「派生今日任务」按钮（落库为当日 todo 任务，带 goalId）
 2. 未完成 **must** 全部进计划，不受时长上限限制；must 总 estMinutes > 上限时置 `overloadWarning`
 3. 可用分钟 = `isWeekend ? weekendMinutes : weekdayMinutes` 按 tier 取值
-4. 剩余分钟按 `goal.priority` 降序（无 goalId 的排最后、按 createdAt）填充 optional / review，恰好放不下整任务即止（不拆分任务）
+4. 剩余分钟按 `goal.priority` 降序（无 goalId 的排最后、按 createdAt）填充 optional / review；放不下整任务则跳过并记入 unplaced，继续尝试后续更小任务（不拆分任务）
 5. 放不下的进 `unplaced`，reason 形如 `"今日剩余 0 分钟"` / `"剩余 15 分钟 < 任务 30 分钟"`
 6. 23:00 睡眠约束的体现 = 档位分钟上限本身；产品不安排深夜任务，不做时间点排布
 
-幂等：同一天重复生成 → 先清除当日 status==='todo' 的旧生成任务再重建；done/deferred 不动。
+幂等：重复生成不销毁任务——选中者仅重写 `date` 为生成日，未选中保持原日期；done/deferred 永不改动；当日 todo 的手动编辑保留（其最新 estMinutes/type 参与下一轮调度）。
 
 ## 6. 测试策略
 
@@ -147,3 +147,4 @@ export function generateDailyPlan(input: PlannerInput): PlannerResult;
 2. 任务不拆分、不做时间点排布：v1 价值在"该做什么/做多少"，时间块管理无验收需求
 3. 导入整体替换不合并：合并冲突处理复杂度与 v0.1 目标不匹配
 4. Goal 两级（quarter/week）而非五级：对齐 90 天计划现实粒度，年度视图无使用场景
+5. HashRouter 而非 BrowserRouter：GitHub Pages 静态托管无服务端回退，深链/刷新需 hash 路由避免 404
